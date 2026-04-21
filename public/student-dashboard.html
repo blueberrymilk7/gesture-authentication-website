@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="School Portal — Student Dashboard">
+  <title>School Portal — Student Dashboard</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <nav class="navbar">
+    <div class="brand">🎓 School Portal <span>Student</span></div>
+    <div class="nav-right">
+      <span class="user-info" id="studentGreeting"></span>
+      <a href="/logout" class="btn-logout">Logout</a>
+    </div>
+  </nav>
+
+  <main class="dashboard">
+    <div class="page-header">
+      <h2>My Dashboard</h2>
+      <p>View your profile and academic grades</p>
+    </div>
+
+    <!-- Profile Card -->
+    <div class="card">
+      <div class="card-header">
+        <h3>My Profile</h3>
+      </div>
+      <div class="profile-info">
+        <div class="profile-field">
+          <div class="label">Full Name</div>
+          <div class="value" id="profileName">—</div>
+        </div>
+        <div class="profile-field">
+          <div class="label">Email Address</div>
+          <div class="value" id="profileEmail">—</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Grades Card -->
+    <div class="card">
+      <div class="card-header">
+        <h3>My Grades</h3>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Subject</th>
+              <th>Grade</th>
+            </tr>
+          </thead>
+          <tbody id="gradesBody">
+            <tr><td colspan="2" class="empty-state">Loading grades…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    async function init() {
+      const res = await fetch('/api/me');
+      if (!res.ok) {
+        window.location.href = '/login.html';
+        return;
+      }
+
+      const user = await res.json();
+
+      if (user.role !== 'student') {
+        window.location.href = '/admin-dashboard.html';
+        return;
+      }
+
+      document.getElementById('studentGreeting').textContent = 'Welcome, ' + user.name;
+      document.getElementById('profileName').textContent = user.name;
+      document.getElementById('profileEmail').textContent = user.email;
+
+      // Load grades
+      const gradesRes = await fetch('/api/grades/' + user.id);
+      const grades = await gradesRes.json();
+      const tbody = document.getElementById('gradesBody');
+
+      if (grades.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="2" class="empty-state">No grades available yet</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = grades.map(g => `
+        <tr><td>${g.subject}</td><td>${g.grade}</td></tr>
+      `).join('');
+    }
+
+    init();
+  </script>
+</body>
+</html>

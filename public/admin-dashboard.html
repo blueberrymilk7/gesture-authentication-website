@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="School Portal — Admin Dashboard">
+  <title>School Portal — Admin Dashboard</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <nav class="navbar">
+    <div class="brand">🎓 School Portal <span>Admin</span></div>
+    <div class="nav-right">
+      <span class="user-info" id="adminName"></span>
+      <a href="/logout" class="btn-logout">Logout</a>
+    </div>
+  </nav>
+
+  <main class="dashboard">
+    <div class="page-header">
+      <h2>Admin Dashboard</h2>
+      <p>Manage students and their grades</p>
+    </div>
+
+    <!-- Add Student -->
+    <div class="card">
+      <div class="card-header">
+        <h3>Add New Student</h3>
+      </div>
+      <div id="studentAlert" class="alert" style="display:none;"></div>
+      <form id="addStudentForm">
+        <div class="form-row">
+          <div class="form-group">
+            <label for="stuName">Full Name</label>
+            <input type="text" id="stuName" placeholder="John Doe" required>
+          </div>
+          <div class="form-group">
+            <label for="stuEmail">Email</label>
+            <input type="email" id="stuEmail" placeholder="john@school.com" required>
+          </div>
+          <div class="form-group">
+            <label for="stuPassword">Password</label>
+            <input type="text" id="stuPassword" placeholder="password123" required>
+          </div>
+          <button type="submit" class="btn btn-primary btn-sm">Add Student</button>
+        </div>
+      </form>
+    </div>
+
+    <!-- Student List -->
+    <div class="card">
+      <div class="card-header">
+        <h3>All Students</h3>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Name</th>
+              <th>Email</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="studentTableBody">
+            <tr><td colspan="4" class="empty-state">Loading students…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Edit Grades -->
+    <div class="card">
+      <div class="card-header">
+        <h3>Manage Grades</h3>
+      </div>
+      <div id="gradeAlert" class="alert" style="display:none;"></div>
+      <form id="gradeForm">
+        <div class="form-row">
+          <div class="form-group">
+            <label for="gradeStudent">Student</label>
+            <select id="gradeStudent" required>
+              <option value="">Select student…</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="gradeSubject">Subject</label>
+            <select id="gradeSubject" required>
+              <option value="">Select subject…</option>
+              <option value="Mathematics">Mathematics</option>
+              <option value="English">English</option>
+              <option value="Science">Science</option>
+              <option value="History">History</option>
+              <option value="Geography">Geography</option>
+              <option value="Physics">Physics</option>
+              <option value="Chemistry">Chemistry</option>
+              <option value="Biology">Biology</option>
+              <option value="Computer Science">Computer Science</option>
+              <option value="Physical Education">Physical Education</option>
+              <option value="Art">Art</option>
+              <option value="Music">Music</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="gradeValue">Grade</label>
+            <select id="gradeValue" required>
+              <option value="">Select grade…</option>
+              <option value="A+">A+</option>
+              <option value="A">A</option>
+              <option value="A-">A-</option>
+              <option value="B+">B+</option>
+              <option value="B">B</option>
+              <option value="B-">B-</option>
+              <option value="C+">C+</option>
+              <option value="C">C</option>
+              <option value="C-">C-</option>
+              <option value="D+">D+</option>
+              <option value="D">D</option>
+              <option value="D-">D-</option>
+              <option value="F">F</option>
+            </select>
+          </div>
+          <button type="submit" class="btn btn-success btn-sm">Save Grade</button>
+        </div>
+      </form>
+
+      <!-- Grades Preview -->
+      <div id="gradesPreview" style="margin-top:1.25rem; display:none;">
+        <h4 style="font-size:0.9rem; color:var(--text-light); margin-bottom:0.5rem;" id="gradesPreviewTitle">Grades</h4>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th>Subject</th><th>Grade</th></tr>
+            </thead>
+            <tbody id="gradesPreviewBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    // Auth check
+    async function init() {
+      const res = await fetch('/api/me');
+      if (!res.ok || (await res.clone().json()).role !== 'admin') {
+        window.location.href = '/login.html';
+        return;
+      }
+      const user = await res.json();
+      document.getElementById('adminName').textContent = 'Welcome, ' + user.name;
+      loadStudents();
+    }
+
+    function showAlert(id, msg, type) {
+      const el = document.getElementById(id);
+      el.textContent = msg;
+      el.className = 'alert alert-' + type;
+      el.style.display = 'block';
+      setTimeout(() => el.style.display = 'none', 4000);
+    }
+
+    async function loadStudents() {
+      const res = await fetch('/api/students');
+      const students = await res.json();
+      const tbody = document.getElementById('studentTableBody');
+      const select = document.getElementById('gradeStudent');
+
+      // Reset select keeping first option
+      select.innerHTML = '<option value="">Select student…</option>';
+
+      if (students.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="4" class="empty-state">No students yet</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = students.map(s => `
+        <tr>
+          <td>${s.id}</td>
+          <td>${s.name}</td>
+          <td>${s.email}</td>
+          <td><button class="btn btn-primary btn-sm" onclick="viewGrades(${s.id}, '${s.name.replace(/'/g, "\\'")}')">View Grades</button></td>
+        </tr>
+      `).join('');
+
+      students.forEach(s => {
+        const opt = document.createElement('option');
+        opt.value = s.id;
+        opt.textContent = s.name;
+        select.appendChild(opt);
+      });
+    }
+
+    // Add student
+    document.getElementById('addStudentForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const name = document.getElementById('stuName').value;
+      const email = document.getElementById('stuEmail').value;
+      const password = document.getElementById('stuPassword').value;
+
+      const res = await fetch('/api/students', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, email, password }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        showAlert('studentAlert', data.error, 'error');
+        return;
+      }
+
+      showAlert('studentAlert', `Student "${data.name}" added successfully!`, 'success');
+      e.target.reset();
+      loadStudents();
+    });
+
+    // Save grade
+    document.getElementById('gradeForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const student_id = document.getElementById('gradeStudent').value;
+      const subject = document.getElementById('gradeSubject').value;
+      const grade = document.getElementById('gradeValue').value;
+
+      const res = await fetch('/api/grades', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ student_id, subject, grade }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        showAlert('gradeAlert', data.error, 'error');
+        return;
+      }
+
+      showAlert('gradeAlert', `Grade saved for ${subject}!`, 'success');
+      document.getElementById('gradeSubject').value = '';
+      document.getElementById('gradeValue').value = '';
+
+      // Refresh preview if same student
+      if (student_id) viewGrades(student_id);
+    });
+
+    // View grades for a student
+    async function viewGrades(studentId, studentName) {
+      const res = await fetch('/api/grades/' + studentId);
+      const grades = await res.json();
+      const preview = document.getElementById('gradesPreview');
+      const body = document.getElementById('gradesPreviewBody');
+      const title = document.getElementById('gradesPreviewTitle');
+
+      if (studentName) title.textContent = `Grades for ${studentName}`;
+      preview.style.display = 'block';
+
+      // Also select the student in the dropdown
+      document.getElementById('gradeStudent').value = studentId;
+
+      if (grades.length === 0) {
+        body.innerHTML = '<tr><td colspan="2" class="empty-state">No grades yet</td></tr>';
+        return;
+      }
+
+      body.innerHTML = grades.map(g => `
+        <tr><td>${g.subject}</td><td>${g.grade}</td></tr>
+      `).join('');
+    }
+
+    init();
+  </script>
+</body>
+</html>
