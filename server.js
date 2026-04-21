@@ -37,10 +37,6 @@ function requireEspSecret(req, res, next) {
 
 // ── Database Initialization ──────────────────────────────────────────
 async function initDB() {
-  // Drop old tables to reset schema (safe for fresh deploy)
-  await pool.query(`DROP TABLE IF EXISTS esp_commands`);
-  await pool.query(`DROP TABLE IF EXISTS grades`);
-  await pool.query(`DROP TABLE IF EXISTS users CASCADE`);
 
   // Users table — username-based, gesture password
   await pool.query(`
