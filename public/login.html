@@ -3,31 +3,61 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="School Portal — Login for administrators and students">
+  <meta name="description" content="School Portal — Gesture Authentication Login">
   <title>School Portal — Login</title>
   <link rel="stylesheet" href="/style.css">
 </head>
 <body>
   <div class="login-wrapper">
     <div class="login-card">
-      <div class="logo">
-        <h1>🎓 School Portal</h1>
-        <p>Sign in to your account</p>
+      <!-- Step 1: Username Entry -->
+      <div id="stepUsername">
+        <div class="logo">
+          <h1>🎓 School Portal</h1>
+          <p>Sign in with gesture authentication</p>
+        </div>
+
+        <div id="alert" class="alert" style="display:none;"></div>
+
+        <form id="loginForm">
+          <div class="form-group">
+            <label for="username">Username</label>
+            <input type="text" id="username" name="username" placeholder="Enter your username" required autocomplete="username">
+          </div>
+          <button type="submit" class="btn btn-primary" id="loginBtn">Enter Password</button>
+        </form>
       </div>
 
-      <div id="alert" class="alert" style="display:none;"></div>
+      <!-- Step 2: Waiting for Gesture -->
+      <div id="stepGesture" class="gesture-step" style="display:none;">
+        <div class="gesture-waiting">
+          <div class="gesture-icon-wrapper">
+            <div class="gesture-ring"></div>
+            <div class="gesture-hand">👋</div>
+          </div>
+          <h2 class="gesture-title">Waiting for Gesture…</h2>
+          <p class="gesture-subtitle">Perform your <strong>6 gestures</strong> on the sensor</p>
+          <div class="gesture-dots">
+            <span class="dot" id="dot0"></span>
+            <span class="dot" id="dot1"></span>
+            <span class="dot" id="dot2"></span>
+            <span class="dot" id="dot3"></span>
+            <span class="dot" id="dot4"></span>
+            <span class="dot" id="dot5"></span>
+          </div>
+          <p class="gesture-user" id="gestureUser"></p>
+          <button type="button" class="btn btn-cancel" id="cancelBtn">Cancel</button>
+        </div>
+      </div>
 
-      <form id="loginForm">
-        <div class="form-group">
-          <label for="email">Email Address</label>
-          <input type="email" id="email" name="email" placeholder="you@school.com" required autocomplete="email">
+      <!-- Step 3: Result -->
+      <div id="stepResult" class="gesture-step" style="display:none;">
+        <div class="gesture-result">
+          <div class="result-icon" id="resultIcon"></div>
+          <h2 class="result-title" id="resultTitle"></h2>
+          <p class="result-subtitle" id="resultSubtitle"></p>
         </div>
-        <div class="form-group">
-          <label for="password">Password</label>
-          <input type="password" id="password" name="password" placeholder="Enter your password" required autocomplete="current-password">
-        </div>
-        <button type="submit" class="btn btn-primary" id="loginBtn">Sign In</button>
-      </form>
+      </div>
     </div>
   </div>
 
@@ -35,11 +65,99 @@
     const form = document.getElementById('loginForm');
     const alertBox = document.getElementById('alert');
     const loginBtn = document.getElementById('loginBtn');
+    const stepUsername = document.getElementById('stepUsername');
+    const stepGesture = document.getElementById('stepGesture');
+    const stepResult = document.getElementById('stepResult');
+    const cancelBtn = document.getElementById('cancelBtn');
+    const gestureUser = document.getElementById('gestureUser');
+
+    let pollInterval = null;
+    let currentToken = null;
 
     function showAlert(msg, type) {
       alertBox.textContent = msg;
       alertBox.className = 'alert alert-' + type;
       alertBox.style.display = 'block';
+    }
+
+    function showStep(step) {
+      stepUsername.style.display = 'none';
+      stepGesture.style.display = 'none';
+      stepResult.style.display = 'none';
+      step.style.display = 'block';
+    }
+
+    function showResult(success, title, subtitle) {
+      showStep(stepResult);
+      const icon = document.getElementById('resultIcon');
+      document.getElementById('resultTitle').textContent = title;
+      document.getElementById('resultSubtitle').textContent = subtitle;
+      if (success) {
+        icon.innerHTML = '<div class="result-check">✓</div>';
+        icon.className = 'result-icon result-success';
+      } else {
+        icon.innerHTML = '<div class="result-x">✗</div>';
+        icon.className = 'result-icon result-fail';
+      }
+    }
+
+    function resetToLogin() {
+      if (pollInterval) clearInterval(pollInterval);
+      pollInterval = null;
+      currentToken = null;
+      showStep(stepUsername);
+      loginBtn.textContent = 'Enter Password';
+      loginBtn.disabled = false;
+      alertBox.style.display = 'none';
+      // Reset dots
+      for (let i = 0; i < 6; i++) {
+        document.getElementById('dot' + i).className = 'dot';
+      }
+    }
+
+    // Start polling for auth result
+    function startPolling(token) {
+      currentToken = token;
+      let dotIdx = 0;
+
+      pollInterval = setInterval(async () => {
+        try {
+          const res = await fetch('/auth/status?token=' + encodeURIComponent(token));
+          const data = await res.json();
+
+          if (data.status === 'processing') {
+            // Animate dots to show ESP32 has picked up the command
+            if (dotIdx < 6) {
+              document.getElementById('dot' + dotIdx).classList.add('active');
+              dotIdx++;
+            }
+          }
+
+          if (data.status === 'success') {
+            clearInterval(pollInterval);
+            // Fill remaining dots
+            for (let i = 0; i < 6; i++) {
+              document.getElementById('dot' + i).classList.add('active');
+              document.getElementById('dot' + i).classList.add('success');
+            }
+            showResult(true, 'Access Granted', 'Redirecting to your dashboard…');
+            setTimeout(() => {
+              window.location.href = data.role === 'admin' ? '/admin-dashboard.html' : '/student-dashboard.html';
+            }, 1500);
+          }
+
+          if (data.status === 'fail') {
+            clearInterval(pollInterval);
+            for (let i = 0; i < 6; i++) {
+              document.getElementById('dot' + i).classList.add('fail');
+            }
+            showResult(false, 'Authentication Failed', 'Incorrect gesture password. Try again.');
+            setTimeout(resetToLogin, 2500);
+          }
+        } catch (err) {
+          // Network error — keep polling
+        }
+      }, 1500);
     }
 
     form.addEventListener('submit', async (e) => {
@@ -48,31 +166,35 @@
       loginBtn.innerHTML = '<span class="spinner"></span>';
       loginBtn.disabled = true;
 
+      const username = document.getElementById('username').value.trim();
+
       try {
         const res = await fetch('/login', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            email: document.getElementById('email').value,
-            password: document.getElementById('password').value,
-          }),
+          body: JSON.stringify({ username }),
         });
         const data = await res.json();
 
         if (!res.ok) {
           showAlert(data.error || 'Login failed', 'error');
-          loginBtn.textContent = 'Sign In';
+          loginBtn.textContent = 'Enter Password';
           loginBtn.disabled = false;
           return;
         }
 
-        window.location.href = data.role === 'admin' ? '/admin-dashboard.html' : '/student-dashboard.html';
+        // Switch to gesture waiting UI
+        gestureUser.textContent = 'Logging in as: ' + username;
+        showStep(stepGesture);
+        startPolling(data.token);
       } catch (err) {
         showAlert('Network error. Please try again.', 'error');
-        loginBtn.textContent = 'Sign In';
+        loginBtn.textContent = 'Enter Password';
         loginBtn.disabled = false;
       }
     });
+
+    cancelBtn.addEventListener('click', resetToLogin);
   </script>
 </body>
 </html>

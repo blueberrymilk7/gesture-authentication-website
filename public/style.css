@@ -18,6 +18,7 @@
   --border: #DCE1E8;
   --success: #27AE60;
   --danger: #E74C3C;
+  --warning: #F39C12;
   --shadow: 0 4px 24px rgba(44, 62, 80, 0.08);
   --shadow-lg: 0 8px 40px rgba(44, 62, 80, 0.12);
   --radius: 12px;
@@ -107,7 +108,7 @@ body {
   border-radius: var(--radius);
   box-shadow: var(--shadow-lg);
   width: 100%;
-  max-width: 420px;
+  max-width: 440px;
   animation: slideUp 0.5s ease;
 }
 
@@ -131,6 +132,233 @@ body {
 .login-card .logo p {
   font-size: 0.875rem;
   color: var(--text-light);
+}
+
+/* ── Gesture Auth UI ─────────────────────────────────────────────── */
+.gesture-step {
+  animation: fadeIn 0.4s ease;
+}
+
+.gesture-waiting,
+.gesture-result {
+  text-align: center;
+  padding: 1rem 0;
+}
+
+.gesture-icon-wrapper {
+  position: relative;
+  width: 100px;
+  height: 100px;
+  margin: 0 auto 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.gesture-icon-sm {
+  width: 72px;
+  height: 72px;
+  margin-bottom: 1rem;
+}
+
+.gesture-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 3px solid var(--accent);
+  opacity: 0.3;
+  animation: pulseRing 2s ease-in-out infinite;
+}
+
+@keyframes pulseRing {
+  0%, 100% { transform: scale(1); opacity: 0.3; }
+  50% { transform: scale(1.15); opacity: 0.6; }
+}
+
+.gesture-hand {
+  font-size: 2.5rem;
+  animation: wave 1.5s ease-in-out infinite;
+  transform-origin: 70% 70%;
+}
+
+.gesture-icon-sm .gesture-hand {
+  font-size: 1.75rem;
+}
+
+@keyframes wave {
+  0%, 100% { transform: rotate(0deg); }
+  25% { transform: rotate(20deg); }
+  75% { transform: rotate(-15deg); }
+}
+
+.gesture-title {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--primary);
+  margin-bottom: 0.4rem;
+}
+
+.gesture-subtitle {
+  font-size: 0.875rem;
+  color: var(--text-light);
+  margin-bottom: 1.25rem;
+  line-height: 1.5;
+}
+
+.gesture-user {
+  font-size: 0.8rem;
+  color: var(--text-light);
+  margin-top: 1rem;
+  opacity: 0.7;
+}
+
+/* ── Gesture Dots ────────────────────────────────────────────────── */
+.gesture-dots {
+  display: flex;
+  justify-content: center;
+  gap: 0.625rem;
+  margin-bottom: 1.25rem;
+}
+
+.dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--border);
+  transition: all 0.3s ease;
+  position: relative;
+}
+
+.dot.active {
+  background: var(--accent);
+  box-shadow: 0 0 8px rgba(52, 152, 219, 0.4);
+  transform: scale(1.15);
+}
+
+.dot.success {
+  background: var(--success);
+  box-shadow: 0 0 8px rgba(39, 174, 96, 0.4);
+}
+
+.dot.fail {
+  background: var(--danger);
+  box-shadow: 0 0 8px rgba(231, 76, 60, 0.4);
+}
+
+/* ── Cancel Button ───────────────────────────────────────────────── */
+.btn-cancel {
+  background: transparent;
+  color: var(--text-light);
+  border: 1.5px solid var(--border);
+  padding: 0.5rem 1.5rem;
+  font-size: 0.8rem;
+  font-weight: 500;
+  font-family: inherit;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: var(--transition);
+  margin-top: 0.5rem;
+}
+
+.btn-cancel:hover {
+  background: var(--bg);
+  color: var(--text);
+  border-color: var(--text-light);
+}
+
+/* ── Auth Result ─────────────────────────────────────────────────── */
+.gesture-result {
+  padding: 1.5rem 0;
+}
+
+.result-icon {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 1.25rem;
+  animation: resultPop 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+@keyframes resultPop {
+  from { transform: scale(0); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+.result-success {
+  background: linear-gradient(135deg, #27ae60, #2ecc71);
+  box-shadow: 0 4px 20px rgba(39, 174, 96, 0.3);
+}
+
+.result-fail {
+  background: linear-gradient(135deg, #e74c3c, #ec7063);
+  box-shadow: 0 4px 20px rgba(231, 76, 60, 0.3);
+}
+
+.result-check,
+.result-x {
+  font-size: 2rem;
+  font-weight: 700;
+  color: white;
+  line-height: 1;
+}
+
+.result-title {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--primary);
+  margin-bottom: 0.3rem;
+}
+
+.result-subtitle {
+  font-size: 0.875rem;
+  color: var(--text-light);
+}
+
+/* ── Create Password Panel (Admin) ───────────────────────────────── */
+.gesture-create-panel {
+  text-align: center;
+  padding: 1.5rem 0;
+  animation: fadeIn 0.4s ease;
+}
+
+.gesture-create-panel .gesture-title {
+  font-size: 1rem;
+}
+
+.gesture-create-panel .gesture-subtitle {
+  font-size: 0.8rem;
+}
+
+/* ── Badge ────────────────────────────────────────────────────────── */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.2rem 0.6rem;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.badge-success {
+  background: #e8f8ef;
+  color: var(--success);
+  border: 1px solid #c3e6cb;
+}
+
+.badge-warning {
+  background: #fef5e7;
+  color: var(--warning);
+  border: 1px solid #fdeaa8;
+}
+
+.btn-gesture {
+  font-size: 0.7rem !important;
+  padding: 0.3rem 0.7rem !important;
 }
 
 /* ── Forms ────────────────────────────────────────────────────────── */
@@ -422,6 +650,8 @@ tbody tr:last-child td {
   .form-row { grid-template-columns: 1fr; }
   table { font-size: 0.8rem; }
   thead th, tbody td { padding: 0.5rem 0.6rem; }
+  .gesture-icon-wrapper { width: 80px; height: 80px; }
+  .gesture-hand { font-size: 2rem; }
 }
 
 @media (max-width: 480px) {

@@ -28,23 +28,46 @@
         <h3>Add New Student</h3>
       </div>
       <div id="studentAlert" class="alert" style="display:none;"></div>
-      <form id="addStudentForm">
-        <div class="form-row">
-          <div class="form-group">
-            <label for="stuName">Full Name</label>
-            <input type="text" id="stuName" placeholder="John Doe" required>
+
+      <!-- Step 1: Enter student details -->
+      <div id="createStep1">
+        <form id="addStudentForm">
+          <div class="form-row">
+            <div class="form-group">
+              <label for="stuName">Full Name</label>
+              <input type="text" id="stuName" placeholder="John Doe" required>
+            </div>
+            <div class="form-group">
+              <label for="stuUsername">Username</label>
+              <input type="text" id="stuUsername" placeholder="johndoe" required>
+            </div>
+            <button type="submit" class="btn btn-primary btn-sm">Add Student</button>
           </div>
-          <div class="form-group">
-            <label for="stuEmail">Email</label>
-            <input type="email" id="stuEmail" placeholder="john@school.com" required>
+        </form>
+      </div>
+
+      <!-- Step 2: Create gesture password -->
+      <div id="createStep2" style="display:none;">
+        <div class="gesture-create-panel">
+          <div class="gesture-icon-wrapper gesture-icon-sm">
+            <div class="gesture-ring"></div>
+            <div class="gesture-hand">👋</div>
           </div>
-          <div class="form-group">
-            <label for="stuPassword">Password</label>
-            <input type="text" id="stuPassword" placeholder="password123" required>
+          <h4 class="gesture-title">Create Gesture Password</h4>
+          <p class="gesture-subtitle">
+            Waiting for <strong>6 gestures</strong> on the sensor for <strong id="createForUser"></strong>
+          </p>
+          <div class="gesture-dots">
+            <span class="dot" id="cdot0"></span>
+            <span class="dot" id="cdot1"></span>
+            <span class="dot" id="cdot2"></span>
+            <span class="dot" id="cdot3"></span>
+            <span class="dot" id="cdot4"></span>
+            <span class="dot" id="cdot5"></span>
           </div>
-          <button type="submit" class="btn btn-primary btn-sm">Add Student</button>
+          <button type="button" class="btn btn-cancel btn-sm" id="cancelCreateBtn">Cancel</button>
         </div>
-      </form>
+      </div>
     </div>
 
     <!-- Student List -->
@@ -58,12 +81,13 @@
             <tr>
               <th>ID</th>
               <th>Name</th>
-              <th>Email</th>
+              <th>Username</th>
+              <th>Password</th>
               <th>Action</th>
             </tr>
           </thead>
           <tbody id="studentTableBody">
-            <tr><td colspan="4" class="empty-state">Loading students…</td></tr>
+            <tr><td colspan="5" class="empty-state">Loading students…</td></tr>
           </tbody>
         </table>
       </div>
@@ -140,6 +164,9 @@
   </main>
 
   <script>
+    let createPollInterval = null;
+    let pendingCreateUsername = '';
+
     // Auth check
     async function init() {
       const res = await fetch('/api/me');
@@ -170,7 +197,7 @@
       select.innerHTML = '<option value="">Select student…</option>';
 
       if (students.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="4" class="empty-state">No students yet</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="5" class="empty-state">No students yet</td></tr>';
         return;
       }
 
@@ -178,7 +205,13 @@
         <tr>
           <td>${s.id}</td>
           <td>${s.name}</td>
-          <td>${s.email}</td>
+          <td>${s.username}</td>
+          <td>
+            ${s.has_password
+              ? '<span class="badge badge-success">✓ Set</span>'
+              : '<button class="btn btn-primary btn-sm btn-gesture" onclick="startCreatePassword(\'' + s.username.replace(/'/g, "\\'") + '\')">Create Password</button>'
+            }
+          </td>
           <td><button class="btn btn-primary btn-sm" onclick="viewGrades(${s.id}, '${s.name.replace(/'/g, "\\'")}')">View Grades</button></td>
         </tr>
       `).join('');
@@ -191,17 +224,16 @@
       });
     }
 
-    // Add student
+    // Add student (without password)
     document.getElementById('addStudentForm').addEventListener('submit', async (e) => {
       e.preventDefault();
-      const name = document.getElementById('stuName').value;
-      const email = document.getElementById('stuEmail').value;
-      const password = document.getElementById('stuPassword').value;
+      const name = document.getElementById('stuName').value.trim();
+      const username = document.getElementById('stuUsername').value.trim();
 
       const res = await fetch('/api/students', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, email, password }),
+        body: JSON.stringify({ name, username }),
       });
 
       const data = await res.json();
@@ -210,9 +242,74 @@
         return;
       }
 
-      showAlert('studentAlert', `Student "${data.name}" added successfully!`, 'success');
+      showAlert('studentAlert', `Student "${data.name}" added! Now create their gesture password.`, 'success');
       e.target.reset();
       loadStudents();
+
+      // Automatically begin create password flow
+      startCreatePassword(data.username);
+    });
+
+    // Start the create-password flow
+    async function startCreatePassword(username) {
+      pendingCreateUsername = username;
+
+      // Queue create command on server
+      const res = await fetch('/esp/command', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ cmd: 'create', username: username }),
+      });
+
+      if (!res.ok) {
+        showAlert('studentAlert', 'Failed to start gesture capture', 'error');
+        return;
+      }
+
+      // Show gesture waiting UI
+      document.getElementById('createStep1').style.display = 'none';
+      document.getElementById('createStep2').style.display = 'block';
+      document.getElementById('createForUser').textContent = username;
+
+      // Reset dots
+      for (let i = 0; i < 6; i++) {
+        document.getElementById('cdot' + i).className = 'dot';
+      }
+
+      // Poll to check if password has been set
+      createPollInterval = setInterval(async () => {
+        try {
+          const r = await fetch('/api/students');
+          const students = await r.json();
+          const student = students.find(s => s.username === pendingCreateUsername);
+
+          if (student && student.has_password) {
+            clearInterval(createPollInterval);
+            createPollInterval = null;
+
+            // Animate dots to success
+            for (let i = 0; i < 6; i++) {
+              document.getElementById('cdot' + i).classList.add('active', 'success');
+            }
+
+            setTimeout(() => {
+              document.getElementById('createStep2').style.display = 'none';
+              document.getElementById('createStep1').style.display = 'block';
+              showAlert('studentAlert', `Gesture password created for "${pendingCreateUsername}"!`, 'success');
+              loadStudents();
+            }, 1200);
+          }
+        } catch (err) {
+          // keep polling
+        }
+      }, 2000);
+    }
+
+    document.getElementById('cancelCreateBtn').addEventListener('click', () => {
+      if (createPollInterval) clearInterval(createPollInterval);
+      createPollInterval = null;
+      document.getElementById('createStep2').style.display = 'none';
+      document.getElementById('createStep1').style.display = 'block';
     });
 
     // Save grade
