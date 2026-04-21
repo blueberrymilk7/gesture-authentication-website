@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="School Portal — Login to access your dashboard">
+  <title>School Portal — Login</title>
+  <link rel="stylesheet" href="/css/common.css">
+  <link rel="stylesheet" href="/css/login.css">
+</head>
+<body>
+  <div class="login-page">
+    <div class="login-card">
+      <!-- Brand -->
+      <div class="login-brand">
+        <div class="logo-icon">🏫</div>
+        <h1>School Portal</h1>
+        <p>Sign in to your account</p>
+      </div>
+
+      <!-- Login Form -->
+      <form class="login-form" id="loginForm">
+        <div class="form-group">
+          <label for="email">Email Address</label>
+          <div class="input-wrapper">
+            <span class="input-icon">📧</span>
+            <input
+              type="email"
+              id="email"
+              class="form-control"
+              placeholder="Enter your email"
+              required
+              autocomplete="email"
+            >
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="password">Password</label>
+          <div class="input-wrapper">
+            <span class="input-icon">🔒</span>
+            <input
+              type="password"
+              id="password"
+              class="form-control"
+              placeholder="Enter your password"
+              required
+              autocomplete="current-password"
+            >
+          </div>
+        </div>
+
+        <button type="submit" class="login-btn" id="loginBtn">
+          <span class="btn-text">Sign In</span>
+          <span class="spinner-small"></span>
+        </button>
+
+        <div class="login-error" id="loginError">
+          <span>⚠️</span>
+          <span id="errorMessage">Invalid credentials</span>
+        </div>
+      </form>
+
+      <!-- Hint -->
+      <div class="login-hint">
+        <strong>Admin:</strong> admin@school.com / admin123<br>
+        <strong>Student:</strong> alice@school.com / student123
+      </div>
+    </div>
+  </div>
+
+  <script src="/js/auth.js"></script>
+</body>
+</html>

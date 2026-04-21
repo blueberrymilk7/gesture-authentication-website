@@ -1,0 +1,252 @@
+/*
+ * ═══════════════════════════════════════════════════════════
+ *  STUDENT DASHBOARD — Teal / Emerald Color Scheme
+ * ═══════════════════════════════════════════════════════════
+ */
+
+/* ── Background ────────────────────────────────────────── */
+
+.student-layout {
+  background: linear-gradient(160deg, #0f172a 0%, #042f2e 40%, #0f172a 100%);
+}
+
+/* ── Sidebar ───────────────────────────────────────────── */
+
+.student-layout .sidebar {
+  background: linear-gradient(180deg, rgba(4, 47, 46, 0.95), rgba(15, 23, 42, 0.98));
+}
+
+.student-layout .sidebar-brand .brand-icon {
+  background: linear-gradient(135deg, #14b8a6, #2dd4bf);
+  color: #fff;
+}
+
+.student-layout .nav-link.active {
+  background: linear-gradient(90deg, rgba(20, 184, 166, 0.2), rgba(20, 184, 166, 0.05));
+}
+
+.student-layout .nav-link.active::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 3px;
+  height: 60%;
+  background: #14b8a6;
+  border-radius: var(--radius-full);
+}
+
+.student-layout .user-avatar {
+  background: linear-gradient(135deg, #14b8a6, #2dd4bf);
+  color: #fff;
+}
+
+/* ── Stat Cards ────────────────────────────────────────── */
+
+.student-layout .stat-card {
+  background: rgba(30, 41, 59, 0.6);
+}
+
+.student-layout .stat-card.profile-stat {
+  border-left: 3px solid #14b8a6;
+}
+.student-layout .stat-card.profile-stat .stat-icon {
+  background: rgba(20, 184, 166, 0.15);
+  color: #2dd4bf;
+}
+
+.student-layout .stat-card.grades-stat {
+  border-left: 3px solid #6366f1;
+}
+.student-layout .stat-card.grades-stat .stat-icon {
+  background: rgba(99, 102, 241, 0.15);
+  color: #818cf8;
+}
+
+.student-layout .stat-card.attendance-stat {
+  border-left: 3px solid #22c55e;
+}
+.student-layout .stat-card.attendance-stat .stat-icon {
+  background: rgba(34, 197, 94, 0.15);
+  color: #4ade80;
+}
+
+.student-layout .stat-card.announcements-stat {
+  border-left: 3px solid #f59e0b;
+}
+.student-layout .stat-card.announcements-stat .stat-icon {
+  background: rgba(245, 158, 11, 0.15);
+  color: #fbbf24;
+}
+
+/* ── Cards ─────────────────────────────────────────────── */
+
+.student-layout .card {
+  background: rgba(30, 41, 59, 0.6);
+}
+
+/* ── Tables ────────────────────────────────────────────── */
+
+.student-layout .table-container {
+  background: rgba(30, 41, 59, 0.6);
+}
+
+/* ── Buttons ───────────────────────────────────────────── */
+
+.student-layout .btn-primary {
+  background: linear-gradient(135deg, #14b8a6, #0d9488);
+}
+
+.student-layout .btn-primary:hover {
+  box-shadow: 0 8px 25px rgba(20, 184, 166, 0.3);
+}
+
+/* ── Announcements ─────────────────────────────────────── */
+
+.student-layout .announcement-card {
+  background: rgba(30, 41, 59, 0.5);
+  border-left: 3px solid #14b8a6;
+}
+
+/* ── Profile Card ──────────────────────────────────────── */
+
+.profile-card {
+  background: rgba(30, 41, 59, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: var(--radius-2xl);
+  padding: var(--space-8);
+  margin-bottom: var(--space-8);
+}
+
+.profile-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-6);
+  margin-bottom: var(--space-6);
+  padding-bottom: var(--space-6);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.profile-avatar {
+  width: 80px;
+  height: 80px;
+  border-radius: var(--radius-full);
+  background: linear-gradient(135deg, #14b8a6, #2dd4bf);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2rem;
+  font-weight: 800;
+  color: #fff;
+  flex-shrink: 0;
+}
+
+.profile-info h2 {
+  font-size: var(--fs-2xl);
+  font-weight: 700;
+  margin-bottom: var(--space-1);
+}
+
+.profile-info .student-id-text {
+  font-size: var(--fs-sm);
+  opacity: 0.5;
+}
+
+.profile-details {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--space-4);
+}
+
+.detail-item {
+  padding: var(--space-4);
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: var(--radius-lg);
+}
+
+.detail-item .detail-label {
+  font-size: var(--fs-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  opacity: 0.5;
+  margin-bottom: var(--space-1);
+}
+
+.detail-item .detail-value {
+  font-size: var(--fs-base);
+  font-weight: 600;
+}
+
+/* ── Subjects List ─────────────────────────────────────── */
+
+.subjects-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: var(--space-3);
+}
+
+.subject-chip {
+  padding: var(--space-3) var(--space-4);
+  background: rgba(20, 184, 166, 0.1);
+  border: 1px solid rgba(20, 184, 166, 0.2);
+  border-radius: var(--radius-lg);
+  font-size: var(--fs-sm);
+  font-weight: 500;
+  text-align: center;
+  transition: all var(--transition-fast);
+}
+
+.subject-chip:hover {
+  background: rgba(20, 184, 166, 0.2);
+  transform: translateY(-1px);
+}
+
+.subject-chip .code {
+  font-size: var(--fs-xs);
+  opacity: 0.5;
+  display: block;
+  margin-top: 2px;
+}
+
+/* ── Misc ──────────────────────────────────────────────── */
+
+.student-layout .page-header h1 {
+  background: linear-gradient(135deg, #e2e8f0, #99f6e4);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ── Attendance Summary Donut ──────────────────────────── */
+
+.attendance-summary {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+  margin-bottom: var(--space-8);
+  flex-wrap: wrap;
+}
+
+.attendance-summary .summary-stats {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.summary-stat-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.summary-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: var(--radius-full);
+  flex-shrink: 0;
+}
+
+.summary-dot.present { background: #4ade80; }
+.summary-dot.absent { background: #f87171; }
+.summary-dot.late { background: #fbbf24; }

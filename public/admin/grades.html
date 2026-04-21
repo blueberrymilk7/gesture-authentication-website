@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Manage Grades — School Portal Admin">
+  <title>Grades — School Portal Admin</title>
+  <link rel="stylesheet" href="/css/common.css">
+  <link rel="stylesheet" href="/css/admin.css">
+</head>
+<body>
+  <div class="app-layout admin-layout">
+    <button class="mobile-toggle" id="mobileToggle">☰</button>
+    <div class="mobile-overlay" id="mobileOverlay"></div>
+
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-brand">
+        <div class="brand-icon">🏫</div>
+        <div>
+          <h2>School Portal</h2>
+          <span>Admin Panel</span>
+        </div>
+      </div>
+      <nav class="sidebar-nav">
+        <a href="/admin/dashboard.html" class="nav-link"><span class="nav-icon">📊</span> Dashboard</a>
+        <a href="/admin/students.html" class="nav-link"><span class="nav-icon">👨‍🎓</span> Students</a>
+        <a href="/admin/announcements.html" class="nav-link"><span class="nav-icon">📢</span> Announcements</a>
+        <a href="/admin/grades.html" class="nav-link active"><span class="nav-icon">📝</span> Grades</a>
+        <a href="/admin/attendance.html" class="nav-link"><span class="nav-icon">📅</span> Attendance</a>
+      </nav>
+      <div class="sidebar-footer">
+        <div class="user-info">
+          <div class="user-avatar" id="userAvatar">A</div>
+          <div class="user-details">
+            <div class="name" id="userName">Admin</div>
+            <div class="role">Administrator</div>
+          </div>
+        </div>
+        <button class="btn-logout" id="logoutBtn"><span>🚪</span> Sign Out</button>
+      </div>
+    </aside>
+
+    <main class="main-content fade-in">
+      <div class="page-header">
+        <h1>Grade Management</h1>
+        <p>View and manage student grades across all subjects.</p>
+      </div>
+
+      <!-- Add / Update Grade Form -->
+      <div class="card" style="margin-bottom: var(--space-8);">
+        <div class="card-header">
+          <h2 class="card-title">Add / Update Grade</h2>
+        </div>
+        <form id="gradeForm">
+          <div class="form-row">
+            <div class="form-group">
+              <label for="gradeStudent">Student</label>
+              <select id="gradeStudent" class="form-control" required>
+                <option value="">Select student</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="gradeSubject">Subject</label>
+              <select id="gradeSubject" class="form-control" required>
+                <option value="">Select subject</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="gradeScore">Score</label>
+              <input type="number" id="gradeScore" class="form-control" placeholder="0-100" min="0" max="100" required>
+            </div>
+            <div class="form-group">
+              <label for="gradeTerm">Term</label>
+              <select id="gradeTerm" class="form-control">
+                <option value="Term 1">Term 1</option>
+                <option value="Term 2">Term 2</option>
+                <option value="Term 3">Term 3</option>
+              </select>
+            </div>
+          </div>
+          <button type="submit" class="btn btn-primary">💾 Save Grade</button>
+        </form>
+      </div>
+
+      <!-- Filter -->
+      <div class="filter-bar">
+        <select id="filterStudent" class="form-control">
+          <option value="">All Students</option>
+        </select>
+      </div>
+
+      <!-- Grades Table -->
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>Student</th>
+              <th>Student ID</th>
+              <th>Class</th>
+              <th>Subject</th>
+              <th>Score</th>
+              <th>Grade</th>
+              <th>Term</th>
+            </tr>
+          </thead>
+          <tbody id="gradesTableBody">
+            <tr><td colspan="7"><div class="loading-spinner"><div class="spinner"></div></div></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </main>
+  </div>
+
+  <div class="toast-container" id="toastContainer"></div>
+  <script src="/js/admin-grades.js"></script>
+</body>
+</html>

@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Admin Dashboard — School Portal">
+  <title>Admin Dashboard — School Portal</title>
+  <link rel="stylesheet" href="/css/common.css">
+  <link rel="stylesheet" href="/css/admin.css">
+</head>
+<body>
+  <div class="app-layout admin-layout">
+    <!-- Mobile Toggle -->
+    <button class="mobile-toggle" id="mobileToggle">☰</button>
+    <div class="mobile-overlay" id="mobileOverlay"></div>
+
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-brand">
+        <div class="brand-icon">🏫</div>
+        <div>
+          <h2>School Portal</h2>
+          <span>Admin Panel</span>
+        </div>
+      </div>
+
+      <nav class="sidebar-nav">
+        <a href="/admin/dashboard.html" class="nav-link active">
+          <span class="nav-icon">📊</span> Dashboard
+        </a>
+        <a href="/admin/students.html" class="nav-link">
+          <span class="nav-icon">👨‍🎓</span> Students
+        </a>
+        <a href="/admin/announcements.html" class="nav-link">
+          <span class="nav-icon">📢</span> Announcements
+        </a>
+        <a href="/admin/grades.html" class="nav-link">
+          <span class="nav-icon">📝</span> Grades
+        </a>
+        <a href="/admin/attendance.html" class="nav-link">
+          <span class="nav-icon">📅</span> Attendance
+        </a>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div class="user-info">
+          <div class="user-avatar" id="userAvatar">A</div>
+          <div class="user-details">
+            <div class="name" id="userName">Admin</div>
+            <div class="role">Administrator</div>
+          </div>
+        </div>
+        <button class="btn-logout" id="logoutBtn">
+          <span>🚪</span> Sign Out
+        </button>
+      </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content fade-in">
+      <div class="page-header">
+        <h1>Dashboard</h1>
+        <p>Welcome back! Here's an overview of your school.</p>
+      </div>
+
+      <!-- Stats Grid -->
+      <div class="stats-grid" id="statsGrid">
+        <div class="stat-card students">
+          <div class="stat-icon">👨‍🎓</div>
+          <div class="stat-value" id="totalStudents">—</div>
+          <div class="stat-label">Total Students</div>
+        </div>
+        <div class="stat-card announcements">
+          <div class="stat-icon">📢</div>
+          <div class="stat-value" id="totalAnnouncements">—</div>
+          <div class="stat-label">Announcements</div>
+        </div>
+        <div class="stat-card attendance">
+          <div class="stat-icon">✅</div>
+          <div class="stat-value" id="avgAttendance">—</div>
+          <div class="stat-label">Avg Attendance</div>
+        </div>
+        <div class="stat-card grades">
+          <div class="stat-icon">📊</div>
+          <div class="stat-value" id="avgGrade">—</div>
+          <div class="stat-label">Avg Grade</div>
+        </div>
+      </div>
+
+      <!-- Recent Announcements -->
+      <div class="card">
+        <div class="card-header">
+          <h2 class="card-title">Recent Announcements</h2>
+          <a href="/admin/announcements.html" class="btn btn-secondary btn-sm">View All →</a>
+        </div>
+        <div class="announcement-list" id="recentAnnouncements">
+          <div class="loading-spinner"><div class="spinner"></div></div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Toast Container -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <script src="/js/admin-dashboard.js"></script>
+</body>
+</html>

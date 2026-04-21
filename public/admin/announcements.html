@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Manage Announcements — School Portal Admin">
+  <title>Announcements — School Portal Admin</title>
+  <link rel="stylesheet" href="/css/common.css">
+  <link rel="stylesheet" href="/css/admin.css">
+</head>
+<body>
+  <div class="app-layout admin-layout">
+    <button class="mobile-toggle" id="mobileToggle">☰</button>
+    <div class="mobile-overlay" id="mobileOverlay"></div>
+
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-brand">
+        <div class="brand-icon">🏫</div>
+        <div>
+          <h2>School Portal</h2>
+          <span>Admin Panel</span>
+        </div>
+      </div>
+      <nav class="sidebar-nav">
+        <a href="/admin/dashboard.html" class="nav-link"><span class="nav-icon">📊</span> Dashboard</a>
+        <a href="/admin/students.html" class="nav-link"><span class="nav-icon">👨‍🎓</span> Students</a>
+        <a href="/admin/announcements.html" class="nav-link active"><span class="nav-icon">📢</span> Announcements</a>
+        <a href="/admin/grades.html" class="nav-link"><span class="nav-icon">📝</span> Grades</a>
+        <a href="/admin/attendance.html" class="nav-link"><span class="nav-icon">📅</span> Attendance</a>
+      </nav>
+      <div class="sidebar-footer">
+        <div class="user-info">
+          <div class="user-avatar" id="userAvatar">A</div>
+          <div class="user-details">
+            <div class="name" id="userName">Admin</div>
+            <div class="role">Administrator</div>
+          </div>
+        </div>
+        <button class="btn-logout" id="logoutBtn"><span>🚪</span> Sign Out</button>
+      </div>
+    </aside>
+
+    <main class="main-content fade-in">
+      <div class="page-header">
+        <h1>Announcements</h1>
+        <p>Post and manage announcements for all students.</p>
+      </div>
+
+      <!-- New Announcement Form -->
+      <div class="card" style="margin-bottom: var(--space-8);">
+        <div class="card-header">
+          <h2 class="card-title">Post New Announcement</h2>
+        </div>
+        <form id="announcementForm">
+          <div class="form-group">
+            <label for="annTitle">Title</label>
+            <input type="text" id="annTitle" class="form-control" placeholder="Announcement title" required>
+          </div>
+          <div class="form-group">
+            <label for="annContent">Content</label>
+            <textarea id="annContent" class="form-control" rows="4" placeholder="Write your announcement here..." required style="resize: vertical; min-height: 100px;"></textarea>
+          </div>
+          <button type="submit" class="btn btn-primary">📢 Post Announcement</button>
+        </form>
+      </div>
+
+      <!-- Announcements List -->
+      <div class="card">
+        <div class="card-header">
+          <h2 class="card-title">All Announcements</h2>
+        </div>
+        <div class="announcement-list" id="announcementsList">
+          <div class="loading-spinner"><div class="spinner"></div></div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <div class="toast-container" id="toastContainer"></div>
+  <script src="/js/admin-announcements.js"></script>
+</body>
+</html>
