@@ -2,6 +2,11 @@
 
 A School Portal website with **ESP32 gesture-based password authentication**. Users log in by entering their username on the website, then performing a 6-gesture sequence on a PAJ7620U2 sensor connected to an ESP32. Built with Node.js, Express, and PostgreSQL.
 
+## Mikhail Chacko Jacob 2025101006
+## Samhith Rao 2025101098
+## Vaishnavi Yeddula 2025101009
+## Veeraj Laata 2025101004
+
 ## How It Works
 
 1. User enters their **username** on the website and clicks **"Enter Password"**
