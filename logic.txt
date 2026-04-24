@@ -1,0 +1,399 @@
+// ============================================================
+// ESP32 #2 — Logic Node (Updated)
+// Added: WiFi, HTTP polling, on-device auth, result reporting
+// Requires libraries: ArduinoJson (install via Library Manager)
+// ============================================================
+
+#include <WiFi.h>
+#include <esp_now.h>
+#include <esp_wifi.h>
+#include <HTTPClient.h>
+#include <ArduinoJson.h>
+
+// ---- WiFi & Server config ----
+// CHANGE THESE to match your network and Render app URL
+const char* WIFI_SSID     = "mikhail";
+const char* WIFI_PASSWORD = "password";
+const char* SERVER_URL    = "https://gesture-authentication-website-1.onrender.com";
+const char* ESP_SECRET    = "ily33";  // must match your backend
+
+// ---- Sensor node MAC (unchanged) ----
+uint8_t sensorNodeMAC[] = {0x9C, 0x9C, 0x1F, 0xFB, 0x82, 0x1C};
+
+// ---- Message struct (unchanged) ----
+typedef struct {
+  uint8_t type;
+  uint8_t gesture;
+  uint8_t cmd;
+} Message;
+
+// ---- Auth state ----
+uint8_t inputBuffer[6] = {0};
+uint8_t bufferIdx      = 0;
+
+// ---- Password fetched from backend ----
+uint8_t fetchedPassword[6] = {0};
+bool    hasFetchedPassword  = false;
+
+// ---- Active session info ----
+String  pendingToken    = "";
+String  pendingUsername = "";
+bool    sessionActive   = false;
+
+// ---- Create mode state ----
+bool    createModeActive = false;
+String  createUsername   = "";
+uint8_t newGestures[6]  = {0};
+uint8_t createIdx        = 0;
+
+enum Mode { MODE_IDLE, MODE_CREATE, MODE_AUTH };
+Mode currentMode = MODE_IDLE;
+
+// ---- Deferred HTTP flags (can't do HTTP inside ESP-NOW callback) ----
+volatile bool authResultReady    = false;
+volatile bool authResultSuccess  = false;
+volatile bool createResultReady  = false;
+
+// ---- ESP-NOW send tracking ----
+volatile bool lastSendOk = false;
+
+// ---- Polling interval ----
+unsigned long lastPollTime = 0;
+const unsigned long POLL_INTERVAL_MS = 2000;
+
+// ============================================================
+// ESP-NOW send callback — tracks delivery
+// ============================================================
+void onSend(const wifi_tx_info_t *tx_info, esp_now_send_status_t status) {
+  lastSendOk = (status == ESP_NOW_SEND_SUCCESS);
+  Serial.printf("[ESP-NOW] Send %s\n", lastSendOk ? "OK" : "FAIL");
+}
+// ============================================================
+// ESP-NOW: send a 1-byte ack to the sensor node (with retry)
+// ============================================================
+void sendAck(uint8_t code) {
+  for (int attempt = 0; attempt < 3; attempt++) {
+    lastSendOk = false;
+    esp_err_t result = esp_now_send(sensorNodeMAC, &code, 1);
+    if (result != ESP_OK) {
+      Serial.printf("[ESP-NOW] esp_now_send error: %d, retry %d\n", result, attempt);
+      delay(50);
+      continue;
+    }
+    // Wait for send callback
+    unsigned long t = millis();
+    while (!lastSendOk && millis() - t < 200) delay(5);
+    if (lastSendOk) {
+      Serial.printf("[ESP-NOW] Ack %d sent successfully\n", code);
+      return;
+    }
+    Serial.printf("[ESP-NOW] Ack %d send timeout, retry %d\n", code, attempt);
+    delay(50);
+  }
+  Serial.printf("[ESP-NOW] WARNING: Ack %d failed after 3 retries\n", code);
+}
+
+// ============================================================
+// ESP-NOW receive callback
+// ============================================================
+void onReceive(const esp_now_recv_info_t *info, const uint8_t *data, int len) {
+  if (len < sizeof(Message)) return;
+  Message msg;
+  memcpy(&msg, data, sizeof(msg));
+
+  Serial.printf("Received: type=%d gesture=%d cmd=%d\n", msg.type, msg.gesture, msg.cmd);
+
+  if (msg.type != 0) return;
+
+  if (msg.cmd == 2) {
+    if (currentMode == MODE_AUTH && hasFetchedPassword) {
+      // ---- Auth gesture received ----
+      inputBuffer[bufferIdx++] = msg.gesture;
+      Serial.printf("[Logic] Auth: %d/6\n", bufferIdx);
+
+      if (bufferIdx == 6) {
+        bool match = true;
+        for (int i = 0; i < 6; i++) {
+          if (inputBuffer[i] != fetchedPassword[i]) { match = false; break; }
+        }
+        bufferIdx = 0;
+        currentMode = MODE_IDLE;
+
+        if (match) {
+          sendAck(2);
+          Serial.println("[Logic] AUTH SUCCESS");
+        } else {
+          sendAck(3);
+          Serial.println("[Logic] AUTH FAIL");
+        }
+
+        // Set flag — HTTP call will happen in loop()
+        authResultSuccess = match;
+        authResultReady   = true;
+        hasFetchedPassword = false;
+      }
+
+    } else if (currentMode == MODE_CREATE && createModeActive) {
+      // ---- Create gesture received ----
+      newGestures[createIdx++] = msg.gesture;
+      Serial.printf("[Logic] Create: %d/6\n", createIdx);
+
+      if (createIdx == 6) {
+        sendAck(4);
+        Serial.println("[Logic] Password captured, will send to server...");
+
+        // Set flag — HTTP call will happen in loop()
+        createResultReady = true;
+
+        createIdx        = 0;
+        createModeActive = false;
+        currentMode      = MODE_IDLE;
+      }
+    }
+  }
+}
+
+// ============================================================
+// WiFi: connect and wait (called in setup)
+// ============================================================
+void connectWiFi() {
+  Serial.printf("Connecting to WiFi: %s\n", WIFI_SSID);
+  WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+
+  int attempts = 0;
+  while (WiFi.status() != WL_CONNECTED && attempts < 20) {
+    delay(500);
+    Serial.print(".");
+    attempts++;
+  }
+
+  if (WiFi.status() == WL_CONNECTED) {
+    Serial.printf("\nWiFi connected! IP: %s, Channel: %d\n",
+                  WiFi.localIP().toString().c_str(), WiFi.channel());
+  } else {
+    Serial.println("\nWiFi connection FAILED. Check SSID/password.");
+  }
+}
+
+// ============================================================
+// Poll backend for a pending command (auth or create)
+// Called every POLL_INTERVAL_MS when MODE_IDLE
+// ============================================================
+void pollForCommand() {
+  if (WiFi.status() != WL_CONNECTED) return;
+
+  HTTPClient http;
+  String url = String(SERVER_URL) + "/esp/command";
+  http.begin(url);
+  http.addHeader("X-ESP-Secret", ESP_SECRET);
+
+  int code = http.GET();
+  if (code == 200) {
+    String body = http.getString();
+    Serial.println("[Poll] Response: " + body);
+
+    StaticJsonDocument<256> doc;
+    DeserializationError err = deserializeJson(doc, body);
+    if (err) { http.end(); return; }
+
+    if (doc["none"] == true) {
+      // No pending command
+      http.end();
+      return;
+    }
+
+    const char* cmd = doc["cmd"];  // "auth" or "create"
+
+    if (strcmp(cmd, "auth") == 0) {
+      pendingToken    = doc["token"].as<String>();
+      pendingUsername = doc["username"].as<String>();
+      sessionActive   = true;
+      Serial.printf("[Logic] Auth command received for user: %s\n", pendingUsername.c_str());
+      http.end();  // close HTTP before doing more HTTP
+      fetchPasswordFromServer(pendingUsername);
+      return;
+
+    } else if (strcmp(cmd, "create") == 0) {
+      createUsername   = doc["username"].as<String>();
+      createModeActive = true;
+      createIdx        = 0;
+      currentMode      = MODE_CREATE;
+      Serial.printf("[Logic] Create command received for user: %s\n", createUsername.c_str());
+      http.end();  // close HTTP before ESP-NOW send
+      sendAck(0);  // tell sensor node to enter create mode
+      return;
+    }
+  } else {
+    Serial.printf("[Poll] HTTP error: %d\n", code);
+  }
+
+  http.end();
+}
+
+// ============================================================
+// Fetch stored gesture password for a given username
+// GET /user/password?username=alice
+// ============================================================
+void fetchPasswordFromServer(String username) {
+  if (WiFi.status() != WL_CONNECTED) return;
+
+  HTTPClient http;
+  String url = String(SERVER_URL) + "/user/password?username=" + username;
+  http.begin(url);
+  http.addHeader("X-ESP-Secret", ESP_SECRET);
+
+  int code = http.GET();
+  if (code == 200) {
+    String body = http.getString();
+    Serial.println("[Fetch] Password response: " + body);
+
+    StaticJsonDocument<256> doc;
+    DeserializationError err = deserializeJson(doc, body);
+    if (err) { http.end(); return; }
+
+    JsonArray arr = doc["gesture_password"].as<JsonArray>();
+    if (arr.size() == 6) {
+      for (int i = 0; i < 6; i++) fetchedPassword[i] = arr[i];
+      hasFetchedPassword = true;
+      currentMode        = MODE_AUTH;
+      bufferIdx          = 0;
+      memset(inputBuffer, 0, 6);
+      http.end();  // close HTTP before ESP-NOW send
+      sendAck(1);  // tell sensor node to enter auth mode
+      Serial.println("[Logic] Password fetched. Entering AUTH mode.");
+    } else {
+      Serial.println("[Fetch] ERROR: gesture_password missing or wrong length");
+      http.end();
+      // User not found / no password set — abort
+      postAuthResult(false);
+      sessionActive = false;
+      pendingToken  = "";
+    }
+  } else {
+    Serial.printf("[Fetch] HTTP error: %d\n", code);
+    http.end();
+  }
+}
+
+// ============================================================
+// POST auth result to backend
+// POST /auth/result  { "token": "...", "success": true|false }
+// ============================================================
+void postAuthResult(bool success) {
+  if (WiFi.status() != WL_CONNECTED || pendingToken == "") return;
+
+  HTTPClient http;
+  String url = String(SERVER_URL) + "/auth/result";
+  http.begin(url);
+  http.addHeader("Content-Type", "application/json");
+  http.addHeader("X-ESP-Secret", ESP_SECRET);
+
+  String body = "{\"token\":\"" + pendingToken + "\",\"success\":" + (success ? "true" : "false") + "}";
+  int code = http.POST(body);
+  Serial.printf("[Result] POST /auth/result -> HTTP %d\n", code);
+  http.end();
+}
+
+// ============================================================
+// POST new gesture password to backend (create flow)
+// POST /users/create-password  { "username": "...", "gestures": [...] }
+// ============================================================
+void postNewPassword() {
+  if (WiFi.status() != WL_CONNECTED) return;
+
+  HTTPClient http;
+  String url = String(SERVER_URL) + "/users/create-password";
+  http.begin(url);
+  http.addHeader("Content-Type", "application/json");
+  http.addHeader("X-ESP-Secret", ESP_SECRET);
+
+  String body = "{\"username\":\"" + createUsername + "\",\"gestures\":[";
+  for (int i = 0; i < 6; i++) {
+    body += newGestures[i];
+    if (i < 5) body += ",";
+  }
+  body += "]}";
+
+  int code = http.POST(body);
+  Serial.printf("[Create] POST /users/create-password -> HTTP %d\n", code);
+  http.end();
+}
+
+// ============================================================
+// Setup
+// ============================================================
+void setup() {
+  Serial.begin(115200);
+  delay(3000);
+  Serial.println("--- Logic Node Booting ---");
+
+  // 1. Set STA mode FIRST, then connect to WiFi
+  WiFi.mode(WIFI_STA);
+  connectWiFi();
+
+  // 2. Init ESP-NOW (WiFi must already be in STA mode)
+  if (esp_now_init() != ESP_OK) {
+    Serial.println("ERROR: esp_now_init failed!");
+    while (true) delay(1000);
+  }
+  Serial.println("ESP-NOW initialized");
+
+  esp_now_register_send_cb(onSend);
+  esp_now_register_recv_cb(onReceive);
+  Serial.println("Callbacks registered");
+
+  // 3. Register sensor node as ESP-NOW peer
+  esp_now_peer_info_t peer = {};
+  memcpy(peer.peer_addr, sensorNodeMAC, 6);
+  peer.channel = WiFi.channel();  // must match after WiFi connects
+  peer.encrypt = false;
+
+  if (esp_now_add_peer(&peer) != ESP_OK) {
+    Serial.println("ERROR: Failed to add peer!");
+    while (true) delay(1000);
+  }
+
+  Serial.println("Logic Node ready. Polling for commands...");
+}
+
+// ============================================================
+// Loop
+// ============================================================
+void loop() {
+  // Reconnect WiFi if it drops
+  if (WiFi.status() != WL_CONNECTED) {
+    Serial.println("[WiFi] Disconnected. Reconnecting...");
+    connectWiFi();
+  }
+
+  // ---- Handle deferred auth result (from ESP-NOW callback) ----
+  if (authResultReady) {
+    authResultReady = false;
+    Serial.println("[Loop] Sending auth result to server...");
+    postAuthResult(authResultSuccess);
+
+    // Clear session after HTTP call completes
+    pendingToken    = "";
+    pendingUsername = "";
+    sessionActive   = false;
+  }
+
+  // ---- Handle deferred create result (from ESP-NOW callback) ----
+  if (createResultReady) {
+    createResultReady = false;
+    Serial.println("[Loop] Sending new password to server...");
+    postNewPassword();
+    createUsername = "";
+  }
+
+  // Poll only when idle and no active session
+  if (currentMode == MODE_IDLE && !sessionActive) {
+    unsigned long now = millis();
+    if (now - lastPollTime >= POLL_INTERVAL_MS) {
+      lastPollTime = now;
+      pollForCommand();
+    }
+  }
+
+  delay(100);
+}
